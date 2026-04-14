@@ -42,7 +42,8 @@ def read_emodulus_data(filename):
         line=fil.readline.strip().split()
         for j in range(6):
             e_mod[i,j] = float(line[j+1])
-    return stress
+    e_mod=e_mod*0.1 #convert to GPa from kBar
+    return e_mod
 
 def read_stress_data(filename):
     #########
@@ -68,6 +69,7 @@ def read_stress_data(filename):
     stress[2,1] = stress[1,2]
     stress[0,2] = float(line[7])
     stress[2,0] = stress[0,2]
+    stress=stress*0.1 #convert to GPa from kBar
 
     return stress
 
@@ -84,14 +86,25 @@ def get_vasp_stress(data_dir='./'):
     residual_stress = read_stress_data(stress_data_file)
     return residual_stress
 
+def write_cij_json(cij, filename = 'cij.json'):
+    cij_dict= {'cij': cij.tolist()}
+    with open(filename, 'w') as fil:
+        json.dump(cij_dict, fil, indent=4)
+
+def read_cij_json(filename):
+    cij_dict = json.loads(open(filename, 'r'))
+    cij = np.array(cij_dict['cij'])
+    return cij
+
 def read_vasp_cij(elast_dir):
-    if exits('cij.json')
+    if os.path.exists('cij.json')
        cij = read_cij_json
     else
-       if not(exists()):
+       emod_filename = 'emodulus_data.outcar'
+       if not(os.path.exists(emod_filename))
            outcar_path = "{}/OUTCAR".format(elast_dir)
-           os.system("grep 'TOTAL ELASTIC MODULI' {} -A 8 >Emod.outcar".format(outcar))
-       cij = read_Emod_file
+           os.system("grep 'TOTAL ELASTIC MODULI' {} -A 8 >{}".format(outcar_path, emod_filename))
+       cij = read_emodulus_data(emod_filename)
        write_cij_json(cij, 'cij.json')
     return cij
 
