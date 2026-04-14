@@ -1,0 +1,31 @@
+This repo contains python scripts for conerting VASP output files
+into input file for the ANETO method.
+ANETO is a method for calclating the elastic self interaction 
+energy for point defects calculated in a periodic cell using a 
+first principles method such as VASP.
+This interaction energy can be subtracted from the point defect
+energy to determine the energy of the isolated defect.
+Aneto can be found at http://emmanuel.clouet.free.fr/Programs/Aneto/aneto.html
+and its method is details in this paper:DOI: https://doi.org/10.1103/
+
+This repo assumes that the elastic strain was zero during the
+point defect calculations, ie. only atomic positions relaxed when
+a defect was inserted into a pristine supercell.
+
+Requirements:
+python 3.? (was built with python 3.12)
+uv which can be installed in a conda environment with "conda install uv"
+
+INPUTs:
+config file which includes directions to the directories where the elastic 
+modulus, reference supercell, and defect supercell, can be found
+the elastic modulus can also be input directly, though it is recomended to 
+calculate with the method used to calculate the defect energies.
+
+a sample input can be found at "config_sample.json"
+
+OUTPUTs:
+A directory will be created and filled with files called "input_elast.##"
+These are files formatted in the ANETO input file format
+Please see ANETO's documentation for information on installation.
+
