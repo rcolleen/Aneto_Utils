@@ -8,11 +8,10 @@
 # ///
 
 from ase.io import write
-from pymatgen.io.vasp.outputs import OUTCAR
+from ase.io.vasp import read_vasp
 import json
 import glob
-
-def read_input_args():
+import os
 
 def vasp_outcar(defect_dir):
     #   INPUTs
@@ -25,16 +24,65 @@ def vasp_outcar(defect_dir):
     outcar = Outcar("{}OUTCAR".format(defect_dir))
     return outcar
 
-def get_vasp_stress():
-    #   INPUTs
+def read_emodulus_data(filename):
+    #########
+    # INPUT
+    # filename: str, location of file with OUTCAR stress data
+    #
+    # RETURN
+    # stress: np.array(3x3) with symmetric stress tensor#
+    ###########
+
+    fil = open(filename)
+    lnum = 0
+    line=[]
+    while lnum<3:line=fil.readline(); lnum=lnum+1
+    e_mod =np.zeros((3,3))
+    for i in range(6):
+        line=fil.readline.strip().split()
+        for j in range(6):
+            e_mod[i,j] = float(line[j+1])
+    return stress
+
+def read_stress_data(filename):
+    #########
+    # INPUT
+    # filename: str, location of file with OUTCAR stress data
+    #
+    # RETURN
+    # stress: np.array(3x3) with symmetric stress tensor#
+    ###########
+
+    fil = open(filename)
+    lnum = 0
+    line=[]
+    while lnum<14:line=fil.readline(); lnum=lnum+1
+    line=fil.readline.strip().split()
+    stress =np.zeros((3,3))
+    stress[0,0] = float(line[2])
+    stress[1,1] = float(line[3])
+    stress[2,2] = float(line[4])
+    stress[0,1] = float(line[5])
+    stress[1,0] = stress[0,1]
+    stress[1,2] = float(line[6])
+    stress[2,1] = stress[1,2]
+    stress[0,2] = float(line[7])
+    stress[2,0] = stress[0,2]
+
+    return stress
+
+def get_vasp_stress(data_dir='./'):
+    #INPUTs
     # defect_dir is string to the path
     #
     #   RETURNs
     # pymatgen outcar object
     #
-    os.system("grep 'FORCE on cell' OUTCAR -A 30 >force.outcar")
-    outcar = Outcar("{}OUTCAR".format(defect_dir))
-    stress_tensors = outcar.stress
+    stress_data_file = '{}/residual_stress.outcar'.format(data_dir)
+    if not(os.path.exists(stress_data_file)):
+       os.system("grep 'FORCE on cell' OUTCAR -A 30 >{}".format(stress_data_file))
+    residual_stress = read_stress_data(stress_data_file)
+    return residual_stress
 
 def read_vasp_cij(elast_dir):
     if exits('cij.json')
@@ -52,9 +100,92 @@ def read_outcar_energy(path):
     energy = float(line[-2])
     return energy
 
-def write_aneto_input(defect_stress, elast_tensor, cell):
+def write_aneto_input(residual_stress, elast_tensor, cell, alat filename='input_elast'):
+    ############# 
+    #   generates input scrpt in NAETO format given the 
+    #   necessary input data
+    #   by default names file input elast, but this will 
+    #   overwrite other files with that name
+    #############
+    fil = open(filename,'w')
+    fil.write(' &input\n')
+    #residual stress which is the stres due to the dipole in the unit cell
+    #not dipole itself. in GPa (not kB in VASP)
+    for i in range(3):
+        for j in range(3):
+           fil.write("   CVoight({},{}) = {}\n".format(i+1,j+1,elast_tensor[i,j]))
+    for i in [4,5,6]:
+        fil.write("   CVoight({},{}) = {}\n".format(i,i,elast_tensor[i-1,i-1]))
+    fil.write('\n')
+    #residual stress which is the stres due to the dipole in the unit cell
+    #not dipole itself. in GPa (not kB in VASP)
+    for i in range(3):
+        for j in range(3):
+           fil.write("   sigma_res({},{}) = {}\n".format(i+1,j+1,residual_stress[i,j]))
+    fil.write('\n')
+    #lattice vectors in fractional coordinates( where 1= alat)
+    # not the same as normal fractional coordinates since may not be cubic
+    for i in range(3):
+        for j in range(3):
+           fil.write("   A{}_ref({}) = {}\n".format(i+1,j+1,cell[i,j]))
+    # a lattice vector of structure
+   fil.write('   alat = {}\n'.format(alat))
+   fil.write(' &end\n')
+   fil.close()
 
+def save_reference_data(scaled_cell, alat, total_energy, json_name='ref_data.json'):
+    ##########
+    # Saves reference data to a json
+    #
+    # INPUTS:
+    # scaled_cell: 3x3 numpy array or nested 3x3 list
+    # alat: float
+    # total_energy: float
+    # json_name: str, default 'ref_data.json'
+    #
+    ##########
 
-def read_config_file():
+    ref_data = {'scaled cell': scaled cell,
+                'alat': alat.tolist(),
+                'total_energy': total_energy,
+                }
+    with open(json_name, 'w') as fl:
+        json.dump(ref_data, fl, indent=4)
+
+def get_prim_alat(path_to_poscar):
+
+    atoms = read_vasp(path_to_poscar)
+    cell = np.array(cell)
+    alat=np.linalg.norm(cell[0])
+    return alat
+
+def get_reference_cell_data(path_to_poscar):
+    #############
+    # INPUT 
+    # path_to_poscar: str, where POSCAR of reference 
+    #    supercell can be found in vasp POSCAR format
+    # 
+    # RETURNS
+    # cell: 3x3 numpy array or list of list
+    # 
+    #############
+
+    atoms = read_vasp(path_to_poscar)
+    cell=np.array(atoms.cell)
+    return cell
+
+def scale_cell(cell, alat):
+    ###########
+    # INPUT
+    # cell: 3x3 np array or list of lists
+    # alat: float
+    #
+    # RETURN:
+    # scaled_cell: 3x3 np array or list of lists
+    ###########
+
+    scaled_cell = cell/alat
+    return scaled_cell
+
 
 
