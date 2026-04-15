@@ -28,7 +28,7 @@ import os
 #
 def test_read_emodulus_file():
 #    test_file_name = 'Emod.outcar'
-    test_modulus = au.read_vasp_cij('./test_files')
+    test_modulus = au.read_cij('./test_files')
     ref_modulus_kB =np.array([[1767.2697, 649.8595, 876.9918, 1.7076,  -0.0844, -0.2260],
                               [649.8595, 1767.0907, 876.7797, 1.4175,-0.4230, 0.2622],
                               [876.9918, 876.7797, 1488.2037, -2.6521, -0.3766, -0.0616],

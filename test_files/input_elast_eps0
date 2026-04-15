@@ -1,0 +1,35 @@
+ &input
+   CVoigt(1,1)=140.28
+   CVoigt(1,2)=69.72 
+   CVoigt(1,3)=65.11
+   CVoigt(2,1)=69.72
+   CVoigt(2,2)=140.28
+   CVoigt(2,3)=65.11
+   CVoigt(3,1)=65.11
+   CVoigt(3,2)=65.11
+   CVoigt(3,3)=168.00
+   CVoigt(4,4)=25.96
+   CVoigt(5,5)=25.96
+   CVoigt(6,6)=35.28
+
+   sigma_res(1,1)=-1.239
+   sigma_res(1,2)=0.     
+   sigma_res(1,3)=0.     
+   sigma_res(2,1)=0.
+   sigma_res(2,2)=-1.239 
+   sigma_res(2,3)=0.
+   sigma_res(3,1)=0.
+   sigma_res(3,2)=0.
+   sigma_res(3,3)=-0.837 
+
+   A1_ref(1) = 4.000000  
+   A1_ref(2) = 0.000000  
+   A1_ref(3) = 0.000000  
+   A2_ref(1) = -2.000000
+   A2_ref(2) = 3.464102
+   A2_ref(3) = 0.000000
+   A3_ref(1) = 0.000000
+   A3_ref(2) = 0.000000
+   A3_ref(3) = 4.803000
+   alat = 3.230 
+ &end

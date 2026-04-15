@@ -37,7 +37,7 @@ def read_emodulus_data(filename):
         line = fil.readline().strip().split()
         for j in range(6):
             e_mod[i, j] = float(line[j + 1])
-    e_mod = e_mod*0.1  # convert to GPa from kBar
+    e_mod = e_mod * 0.1  # convert to GPa from kBar
     print(e_mod)
     return e_mod
 
@@ -82,7 +82,11 @@ def get_vasp_stress(data_dir="./"):
     #
     stress_data_file = "{}/residual_stress.outcar".format(data_dir)
     if not (os.path.exists(stress_data_file)):
-        os.system("grep 'FORCE on cell' {}/OUTCAR -A 30 >{}".format(data_dir, stress_data_file))
+        os.system(
+            "grep 'FORCE on cell' {}/OUTCAR -A 30 >{}".format(
+                data_dir, stress_data_file
+            )
+        )
     residual_stress = read_stress_data(stress_data_file)
     return residual_stress
 
@@ -94,12 +98,12 @@ def write_cij_json(cij, filename="cij.json"):
 
 
 def read_cij_json(filename):
-    cij_dict = json.loads(open(filename, "r"))
+    cij_dict = json.load(open(filename, "r"))
     cij = np.array(cij_dict["cij"])
     return cij
 
 
-def read_vasp_cij(elast_dir):
+def read_cij(elast_dir):
     if os.path.exists("cij.json"):
         cij = read_cij_json
     else:
@@ -117,7 +121,12 @@ def read_vasp_cij(elast_dir):
 
 
 def read_outcar_energy(path):
-    line = os.system("grep 'TOTEN' OUTCAR").strip().split()
+    line = os.system("grep 'ENERGIE' {} -A 5 >temp.energy".format(path))
+    fl = open("temp.energy", "r")
+    for i in range(3):
+        line = fl.readline()
+    line = line.strip().split()
+    print(line)
     energy = float(line[-2])
     return energy
 
@@ -138,7 +147,7 @@ def write_aneto_input(
     for i in range(3):
         for j in range(3):
             fil.write(
-                    "   CVoigt({},{})={:.2f}\n".format(i + 1, j + 1, elast_tensor[i, j])
+                "   CVoigt({},{})={:.2f}\n".format(i + 1, j + 1, elast_tensor[i, j])
             )
     for i in [4, 5, 6]:
         fil.write("   CVoigt({},{})={:.2f}\n".format(i, i, elast_tensor[i - 1, i - 1]))
@@ -175,8 +184,8 @@ def save_reference_data(scaled_cell, alat, total_energy, json_name="ref_data.jso
     ##########
 
     ref_data = {
-        "scaled cell": scaled_cell,
-        "alat": alat.tolist(),
+        "scaled_cell": scaled_cell.tolist(),
+        "alat": alat,
         "total_energy": total_energy,
     }
     with open(json_name, "w") as fl:
@@ -219,3 +228,46 @@ def scale_cell(cell, alat):
 
     scaled_cell = cell / alat
     return scaled_cell
+
+
+def load_ref_data(ref_data_string):
+    if ref_data_string[-4:] != "json":
+        try:
+            os.path.exists("{}/OUTCAR.super".format(ref_data_string))
+        except:
+            print("No OUTCAR.super found. Please provide path to json\
+                \nor dir with OUTCAR.super, POSCAR.prim, and POSCAR.super")
+        cell_super = get_reference_cell_data("{}/POSCAR.super".format(ref_data_string))
+        alat = get_prim_alat("{}/POSCAR.prim".format(ref_data_string))
+        scaled_cell = scale_cell(cell_super, alat)
+
+        ref_energy = read_outcar_energy("{}/OUTCAR.super".format(ref_data_string))
+        save_reference_data(scaled_cell, alat, ref_energy)
+
+    with open('ref_data.json', "r") as fl:
+        ref_data = json.load(fl)
+    return ref_data
+
+
+def setup_aneto(
+    defect_dir,
+    ref_dict,
+    e_mod=[],
+    save_dir="aneto_input_files",
+    label="test",
+    elastic_dir="./",
+):
+
+    #    ref_data = load_ref_data(ref_data_string)
+    defect_stress = get_vasp_stress(defect_dir)
+    if len(e_mod) == 0:
+        e_mod = read_cij(elastic_dir)
+    if not (os.path.exists(save_dir)):
+        os.mkdir(save_dir)
+    write_aneto_input(
+        defect_stress,
+        e_mod,
+        np.array(ref_dict["scaled_cell"]),
+        ref_dict["alat"],
+        "{}/input_elast_{}".format(save_dir, label),
+    )
