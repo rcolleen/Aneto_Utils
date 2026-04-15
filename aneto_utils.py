@@ -1,6 +1,5 @@
 # /// script
 # dependencies = [
-#    "pymatgen",
 #    "ase ==3.26.0",
 #    "numpy",
 #    "json",
